@@ -74,8 +74,9 @@ CloudBridge is a **real-time emergency crisis management system** designed to pr
 
 ---
 
-## 👩‍💻 Contributors
-- **Sai Durga Bhavani Palla** – Frontend Developer, Project Lead  
+## 👩‍💻 Contributor
+- **Sai Durga Bhavani Palla** – Frontend Developer & Project Lead with experience in web development, cloud, networks, and interest in IoT/embedded systems.  
+
 
 
 
