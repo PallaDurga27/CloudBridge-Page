@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CloudBridge – The Real-Time Emergency Crisis Management System</title>
+  <!-- Leaflet (Map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Chart.js (Dashboard) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --primary:#5A38E3; /* purple */
+      --accent:#ff2d55;  /* red */
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#222;
+      --muted:#6b7280;
+      --ok:#16a34a;
+      --warn:#eab308;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;background:var(--bg);color:var(--text)}
+    header{padding:14px 18px;background:var(--primary);color:#fff;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+    header .brand{font-weight:700;letter-spacing:.3px}
+    header .spacer{flex:1}
+    header .user{font-size:.9rem;opacity:.9}
+
+    main{max-width:1100px;margin:18px auto;padding:0 14px}
+
+    .grid{display:grid;gap:14px}
+    .grid-2{grid-template-columns:1.5fr 1fr}
+    @media (max-width:960px){.grid-2{grid-template-columns:1fr}}
+    .card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(16,24,40,.06)}
+    .title{margin:0 0 10px;font-size:1.1rem}
+
+    /* auth */
+    .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#5A38E3, #8f6cf6)}
+    .auth{width:min(420px,92vw);background:#fff;border-radius:18px;padding:26px;box-shadow:0 32px 64px rgba(0,0,0,.2)}
+    .auth h1{margin:.2rem 0 1rem}
+    .input{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+    .input input{padding:12px 14px;border:1px solid #e5e7eb;border-radius:12px;font-size:1rem}
+    .btn{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#e5e7eb;color:#111}
+    .muted{color:var(--muted);font-size:.9rem}
+    .link{color:var(--primary);cursor:pointer}
+
+    /* home */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{background:#fff;border-radius:14px;padding:14px;border:1px solid #eef2ff}
+    .kpi h3{margin:0;font-size:.95rem;color:#374151}
+    .kpi .num{font-size:1.6rem;font-weight:800;margin-top:6px}
+
+    .sos-wrap{display:flex;align-items:center;justify-content:center}
+    .sos{width:220px;height:220px;border-radius:50%;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.4rem;box-shadow:0 10px 30px rgba(255,45,85,.35);cursor:pointer;position:relative}
+    .sos::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:4px solid rgba(255,45,85,.5);animation:pulse 2s infinite}
+    @keyframes pulse{0%{transform:scale(.9);opacity:.9}100%{transform:scale(1.2);opacity:0}}
+
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{background:#fff;border:1px solid #eef2ff;border-radius:12px;padding:12px}
+
+    /* sos page */
+    .sending{display:flex;align-items:center;gap:12px}
+    .ping{width:18px;height:18px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(255,45,85,.7);animation:ping 1.2s infinite}
+    @keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,45,85,.7)}100%{box-shadow:0 0 0 14px rgba(255,45,85,0)}}
+    .status{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .badge{padding:4px 8px;border-radius:999px;font-size:.82rem;font-weight:700;display:inline-block}
+    .ok{background:#ecfdf5;color:#065f46}
+    .fail{background:#fef2f2;color:#991b1b}
+
+    /* map */
+    #map{height:420px;border-radius:14px}
+    .res-list{max-height:420px;overflow:auto}
+
+    /* chat */
+    .chat{height:440px;display:flex;flex-direction:column}
+    .messages{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .bubble{max-width:70%;padding:10px 12px;border-radius:14px}
+    .me{align-self:flex-end;background:#e9e5ff}
+    .them{align-self:flex-start;background:#f1f5f9}
+    .chat-input{display:flex;gap:8px;margin-top:10px}
+    .chat-input input{flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:12px}
+
+    /* navbar */
+    .tabs{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #e5e7eb;border-radius:999px;display:flex;gap:10px;padding:8px 10px;box-shadow:0 18px 50px rgba(0,0,0,.12);z-index:20}
+    .tab{padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600;color:#374151}
+    .tab.active{background:var(--primary);color:#fff}
+
+    /* hidden by route */
+    section{display:none}
+    section.active{display:block}
+  </style>
+</head>
+<body>
+  <!-- Header (hidden on auth) -->
+  <header id="appHeader" style="display:none">
+    <div class="brand">🌐 CloudBridge – The Real-Time Emergency Crisis Management System</div>
+    <div class="spacer"></div>
+    <div class="user" id="userTag"></div>
+  </header>
+
+  <!-- Auth -->
+  <div id="auth" class="auth-wrap">
+    <div class="auth">
+      <h1>Welcome Back</h1>
+      <p class="muted">Log in to continue your secure connection.</p>
+      <div class="input">
+        <label>Username</label>
+        <input id="authUser" placeholder="Enter your username" />
+      </div>
+      <div class="input">
+        <label>Password</label>
+        <input id="authPass" type="password" placeholder="Enter your password" />
+      </div>
+      <button class="btn" onclick="login()">Login</button>
+      <p class="muted" style="margin-top:10px">Don't have an account? <span class="link" onclick="signup()">Sign up</span></p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <main id="app" style="display:none">
+
+    <!-- Home -->
+    <section id="home" class="active">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2 class="title">SOS Alert</h2>
+          <div class="sos-wrap">
+            <div class="sos" onclick="goto('sos')">SOS ALERT</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="title">Emergency Overview</h2>
+          <div class="kpis">
+            <div class="kpi"><h3>Active Incidents</h3><div class="num" id="kpiInc">3</div></div>
+            <div class="kpi"><h3>Open Shelters</h3><div class="num" id="kpiShel">12</div></div>
+            <div class="kpi"><h3>Available Resources</h3><div class="num" id="kpiRes">48</div></div>
+            <div class="kpi"><h3>Messages</h3><div class="num" id="kpiMsg">7</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h2 class="title">Recent Activities</h2>
+        <div class="list" id="activityList"></div>
+      </div>
+    </section>
+
+    <!-- SOS -->
+    <section id="sos">
+      <div class="card">
+        <h2 class="title">SOS Alert Sent</h2>
+        <div class="sending"><div class="ping"></div><div id="sosStatus">Sending Emergency Alert...</div></div>
+        <div class="status" id="contactStatus" style="margin-top:16px"></div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn" onclick="goto('home')">Return Home</button>
+          <button class="btn secondary" onclick="goto('map')">Open Live Map</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Map -->
+    <section id="map">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2 class="title">Live Map</h2>
+          <div id="map"></div>
+        </div>
+        <div class="card">
+          <h2 class="title">Nearby Resources</h2>
+          <div class="res-list" id="resList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chat -->
+    <section id="chat">
+      <div class="card chat">
+        <h2 class="title">Emergency Chat</h2>
+        <div class="messages" id="messages"></div>
+        <div class="chat-input">
+          <input id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMsg()" />
+          <button class="btn" onclick="sendMsg()">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2 class="title">Crisis Overview</h2>
+          <canvas id="lineChart" height="180"></canvas>
+        </div>
+        <div class="card">
+          <h2 class="title">Incident Categories</h2>
+          <canvas id="pieChart" height="180"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h2 class="title">Resource Deployment</h2>
+        <canvas id="barChart" height="220"></canvas>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Tabs -->
+  <div id="tabs" class="tabs" style="display:none">
+    <div class="tab active" data-go="home" onclick="goto('home')">Home</div>
+    <div class="tab" data-go="map" onclick="goto('map')">Live Map</div>
+    <div class="tab" data-go="chat" onclick="goto('chat')">Chat</div>
+    <div class="tab" data-go="dashboard" onclick="goto('dashboard')">Dashboard</div>
+  </div>
+
+<script>
+  // ======= APP STATE =======
+  const state = {
+    user:null,
+    activities:[
+      {t:'New Incident Reported – Flood near Godavari', time:'5 min ago'},
+      {t:'Safety Tip: Earthquake prep', time:'26 min ago'},
+      {t:'Shelter Update: New capacity at Warangal', time:'1 hr ago'}
+    ],
+    contacts:[
+      {name:'Sarah Johnson', role:'City Emergency', ok:null},
+      {name:'John Ravi', role:'Family, Secunderabad', ok:null},
+      {name:'Community Support', role:'Local Volunteers', ok:null}
+    ],
+    resources:[
+      {type:'Community Shelter', city:'Central Shelter, Delhi', dist:'2.1 km', lat:28.6139, lng:77.2090},
+      {type:'Medical Aid', city:'Riverside Medical Aid, Pune', dist:'4.5 km', lat:18.5204, lng:73.8567},
+      {type:'Food Bank', city:'Northwood Food Bank, Lucknow', dist:'7.2 km', lat:26.8467, lng:80.9462},
+      {type:'Supply Hub', city:'Emergency Supply Hub, Hyderabad', dist:'9.8 km', lat:17.3850, lng:78.4867},
+      {type:'Community Shelter', city:'Southside Shelter, Chennai', dist:'12.0 km', lat:13.0827, lng:80.2707}
+    ]
+  };
+
+  // ======= AUTH =======
+  function login(){
+    const u=document.getElementById('authUser').value.trim();
+    if(!u){alert('Enter username');return}
+    state.user=u;
+    document.getElementById('userTag').textContent = 'Signed in as '+u;
+    document.getElementById('auth').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('appHeader').style.display='flex';
+    document.getElementById('tabs').style.display='flex';
+    renderHome();
+    setTimeout(initMap, 50);
+    setTimeout(initCharts, 50);
+    goto('home');
+  }
+  function signup(){
+    const u=prompt('Choose a username');
+    if(u){document.getElementById('authUser').value=u; alert('Account created! Now set a password and Login.')}  
+  }
+
+  // ======= ROUTER =======
+  function goto(id){
+    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+    const el=document.getElementById(id); if(el){el.classList.add('active')}
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const tab=document.querySelector(`.tab[data-go="${id}"]`); if(tab){tab.classList.add('active')} 
+    if(id==='map' && window._mapInited){setTimeout(()=>{_map.invalidateSize()}, 50)}
+  }
+
+  // ======= HOME =======
+  function renderHome(){
+    const wrap=document.getElementById('activityList');
+    wrap.innerHTML='';
+    state.activities.forEach(a=>{
+      const d=document.createElement('div'); d.className='item';
+      d.innerHTML = `<strong>${a.t}</strong><div class="muted">${a.time}</div>`;
+      wrap.appendChild(d);
+    })
+  }
+
+  // ======= SOS FLOW =======
+  function startSOSFlow(){
+    // Set statuses to pending
+    state.contacts.forEach(c=>c.ok=null);
+    document.getElementById('contactStatus').innerHTML='';
+    document.getElementById('sosStatus').textContent='Sending Emergency Alert...';
+    // staggered updates
+    state.contacts.forEach((c, i)=>{
+      setTimeout(()=>{
+        c.ok = Math.random()>.2; // 80% success
+        renderContacts();
+        if(i===state.contacts.length-1){
+          document.getElementById('sosStatus').textContent='Contacts Notified';
+        }
+      }, 800*(i+1));
+    })
+  }
+  function renderContacts(){
+    const wrap=document.getElementById('contactStatus');
+    wrap.innerHTML='';
+    state.contacts.forEach(c=>{
+      const d=document.createElement('div');
+      const badge = c.ok===null ? '<span class="badge">Pending</span>' : (c.ok?'<span class="badge ok">Notified</span>':'<span class="badge fail">Failed</span>');
+      d.innerHTML = `<div><strong>${c.name}</strong> · <span class="muted">${c.role}</span> ${badge}</div>`;
+      wrap.appendChild(d);
+    })
+  }
+
+  // Open SOS when user taps big circle
+  document.addEventListener('click', (e)=>{
+    if(e.target.closest('.sos')){goto('sos'); startSOSFlow();}
+  });
+
+  // ======= MAP (Leaflet) =======
+  let _map; window._mapInited=false;
+  function initMap(){
+    if(window._mapInited) return;
+    _map = L.map('map', {zoomControl:true});
+    _map.setView([22.9734, 78.6569], 5); // India center
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(_map);
+
+    // markers
+    state.resources.forEach(r=>{
+      const color = r.type.includes('Medical')? 'green' : r.type.includes('Food')? 'orange' : r.type.includes('Supply')? 'purple' : 'blue';
+      const icon = L.divIcon({className:'', html:`<div style="transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:${color};box-shadow:0 0 0 6px rgba(0,0,0,.15)"></div>`});
+      L.marker([r.lat, r.lng], {icon}).addTo(_map).bindPopup(`<strong>${r.type}</strong><br>${r.city}<br><small>${r.dist}</small>`);
+    })
+
+    // list
+    const list=document.getElementById('resList'); list.innerHTML='';
+    state.resources.forEach(r=>{
+      const it=document.createElement('div'); it.className='item';
+      it.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${r.type}</strong><div class="muted">${r.city}</div><div class="muted">${r.dist}</div></div><button class="btn secondary" onclick="flyTo(${r.lat},${r.lng})">View</button></div>`;
+      list.appendChild(it);
+    })
+
+    window._mapInited=true;
+  }
+  function flyTo(lat,lng){_map.flyTo([lat,lng], 12)}
+
+  // ======= CHAT =======
+  const msgs=[
+    {me:false, text:'Urgent: A shelter has limited capacity near East District.'},
+    {me:true, text:'Copy. Updating the Live Map with available shelters.'},
+  ];
+  function renderChat(){
+    const box=document.getElementById('messages');
+    box.innerHTML='';
+    msgs.forEach(m=>{
+      const b=document.createElement('div');
+      b.className='bubble '+(m.me?'me':'them');
+      b.textContent=m.text;
+      box.appendChild(b);
+    })
+    box.scrollTop = box.scrollHeight;
+  }
+  function sendMsg(){
+    const inp=document.getElementById('chatInput');
+    const t=inp.value.trim(); if(!t) return;
+    msgs.push({me:true, text:t}); inp.value=''; renderChat();
+    // simple bot reply
+    setTimeout(()=>{msgs.push({me:false, text:'Roger. Team notified ✔️'}); renderChat();}, 700);
+  }
+
+  // ======= DASHBOARD CHARTS =======
+  function initCharts(){
+    const lineCtx=document.getElementById('lineChart');
+    new Chart(lineCtx,{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Incidents',data:[7,5,6,9,8,11,6]}]}});
+
+    const pieCtx=document.getElementById('pieChart');
+    new Chart(pieCtx,{type:'doughnut',data:{labels:['Medical','Natural','Fire','Logistics'],datasets:[{data:[32,18,22,28]}]},options:{plugins:{legend:{position:'bottom'}}}});
+
+    const barCtx=document.getElementById('barChart');
+    new Chart(barCtx,{type:'bar',data:{labels:['Ambulance','Boats','Rescue Vans','Volunteers'],datasets:[{label:'Deployed',data:[18,7,12,45]}]},options:{plugins:{legend:{display:false}}}});
+  }
+
+  // ======= INIT after auth =======
+  document.addEventListener('DOMContentLoaded',()=>{
+    renderHome();
+    renderChat();
+    // route by hash (optional)
+    window.addEventListener('hashchange',()=>{const id=location.hash.replace('#',''); if(document.getElementById(id)) goto(id)});
+  });
+</script>
+</body>
+</html>
