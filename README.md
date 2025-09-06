@@ -5,9 +5,7 @@ CloudBridge is a **real-time emergency crisis management system** designed to pr
 ---
 
 ## 🚀 Live Demo
-🌐 [https://cloudbridge.netlify.app/](#)  
-## 🚀 Live Demo
-🌐 [Click here to visit CloudBridge](https://cloudbridge-project.netlify.app)
+🌐 [https://cloudbridge.netlify.app/](#) 
 
 
 
