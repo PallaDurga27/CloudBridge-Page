@@ -9,9 +9,7 @@ CloudBridge is a **real-time emergency crisis management system** designed to pr
 
 
 
-📹 **Demo Video**  
-🎥 [Watch CloudBridge in action](#)  
- 
+
 
 ---
 
